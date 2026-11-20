@@ -14,6 +14,7 @@ method: POST
 - 이메일은 최대 100자의 이메일 형식이어야 하고 중복될 수 없다.
 - 비밀번호는 4~20자이며 영문, 숫자, 특수문자를 각각 1개 이상 포함해야 하고 공백을 포함할 수 없다.
 - 닉네임은 4~20자이며 영문(대·소문자), 숫자, 한글만 허용하고 중복될 수 없다.
+- 여러 값이 동시에 잘못되면 아래 에러 응답 순서대로 검사해 첫 번째 오류 하나만 반환한다.
 
 # 02. 요청(Request)
 
@@ -81,6 +82,252 @@ method: POST
 
 **에러 응답**
 
+모든 에러 응답 body는 아래 두 필드만 가진다.
+
+| 이름 | 데이터타입 | 필수 | 설명 |
+|---|---|---|---|
+| message | String | Y | 클라이언트 화면에 그대로 보여 줄 에러 메시지 |
+| status | Integer | Y | HTTP 상태 코드 |
+
+| 상태 | 발생 조건 | message |
+|---|---|---|
+| 400 | email이 null·빈 값·공백만 있을 때 | 이메일을 입력해 주세요. |
+| 400 | email이 이메일 형식이 아닐 때 | 올바른 이메일 형식으로 입력해 주세요. |
+| 400 | email이 100자를 넘을 때 | 이메일은 100자 이하로 입력해 주세요. |
+| 400 | password가 null·빈 값·공백만 있을 때 | 비밀번호를 입력해 주세요. |
+| 400 | password에 공백 문자가 있을 때 | 비밀번호에는 공백을 사용할 수 없습니다. |
+| 400 | password가 4자 미만이거나 20자를 넘을 때 | 비밀번호는 4자 이상 20자 이하로 입력해 주세요. |
+| 400 | password에 영문·숫자·특수문자 중 하나라도 없을 때 | 비밀번호는 영문, 숫자, 특수문자를 각각 1개 이상 포함해 주세요. |
+| 400 | nickname이 null·빈 값·공백만 있을 때 | 닉네임을 입력해 주세요. |
+| 400 | nickname이 4자 미만이거나 20자를 넘을 때 | 닉네임은 4자 이상 20자 이하로 입력해 주세요. |
+| 400 | nickname에 영문·숫자·한글 외 문자(특수문자·공백 등)가 있을 때 | 닉네임은 영문, 숫자, 한글만 사용할 수 있습니다. |
+| 409 | 이미 가입된 email일 때 | 이미 사용 중인 이메일입니다. |
+| 409 | 이미 사용 중인 nickname일 때 | 이미 사용 중인 닉네임입니다. |
+
+**에러 응답 1:** `400 Bad Request` — email이 null·빈 값·공백만 있을 때
+
+요청
+
+```json
+{
+  "email": "",
+  "password": "password1234!",
+  "nickname": "gygim"
+}
+```
+
+응답
+
+```json
+{
+  "message": "이메일을 입력해 주세요.",
+  "status": 400
+}
+```
+
+**에러 응답 2:** `400 Bad Request` — email이 이메일 형식이 아닐 때
+
+요청
+
+```json
+{
+  "email": "user-example.com",
+  "password": "password1234!",
+  "nickname": "gygim"
+}
+```
+
+응답
+
+```json
+{
+  "message": "올바른 이메일 형식으로 입력해 주세요.",
+  "status": 400
+}
+```
+
+**에러 응답 3:** `400 Bad Request` — email이 100자를 넘을 때 (예시 값은 앞부분 생략)
+
+요청
+
+```json
+{
+  "email": "aaaaaaaaaa...aaaaaaaaaa@example.com",
+  "password": "password1234!",
+  "nickname": "gygim"
+}
+```
+
+응답
+
+```json
+{
+  "message": "이메일은 100자 이하로 입력해 주세요.",
+  "status": 400
+}
+```
+
+**에러 응답 4:** `400 Bad Request` — password가 null·빈 값·공백만 있을 때
+
+요청
+
+```json
+{
+  "email": "user@example.com",
+  "password": "",
+  "nickname": "gygim"
+}
+```
+
+응답
+
+```json
+{
+  "message": "비밀번호를 입력해 주세요.",
+  "status": 400
+}
+```
+
+**에러 응답 5:** `400 Bad Request` — password에 공백 문자가 있을 때
+
+요청
+
+```json
+{
+  "email": "user@example.com",
+  "password": "password 1234!",
+  "nickname": "gygim"
+}
+```
+
+응답
+
+```json
+{
+  "message": "비밀번호에는 공백을 사용할 수 없습니다.",
+  "status": 400
+}
+```
+
+**에러 응답 6:** `400 Bad Request` — password가 4자 미만이거나 20자를 넘을 때
+
+요청
+
+```json
+{
+  "email": "user@example.com",
+  "password": "a1!",
+  "nickname": "gygim"
+}
+```
+
+응답
+
+```json
+{
+  "message": "비밀번호는 4자 이상 20자 이하로 입력해 주세요.",
+  "status": 400
+}
+```
+
+**에러 응답 7:** `400 Bad Request` — password에 영문·숫자·특수문자 중 하나라도 없을 때
+
+요청
+
+```json
+{
+  "email": "user@example.com",
+  "password": "password1234",
+  "nickname": "gygim"
+}
+```
+
+응답
+
+```json
+{
+  "message": "비밀번호는 영문, 숫자, 특수문자를 각각 1개 이상 포함해 주세요.",
+  "status": 400
+}
+```
+
+**에러 응답 8:** `400 Bad Request` — nickname이 null·빈 값·공백만 있을 때
+
+요청
+
+```json
+{
+  "email": "user@example.com",
+  "password": "password1234!",
+  "nickname": ""
+}
+```
+
+응답
+
+```json
+{
+  "message": "닉네임을 입력해 주세요.",
+  "status": 400
+}
+```
+
+**에러 응답 9:** `400 Bad Request` — nickname이 4자 미만이거나 20자를 넘을 때
+
+요청
+
+```json
+{
+  "email": "user@example.com",
+  "password": "password1234!",
+  "nickname": "gyg"
+}
+```
+
+응답
+
+```json
+{
+  "message": "닉네임은 4자 이상 20자 이하로 입력해 주세요.",
+  "status": 400
+}
+```
+
+**에러 응답 10:** `400 Bad Request` — nickname에 영문·숫자·한글 외 문자(특수문자·공백 등)가 있을 때
+
+요청
+
+```json
+{
+  "email": "user@example.com",
+  "password": "password1234!",
+  "nickname": "gygim!"
+}
+```
+
+응답
+
+```json
+{
+  "message": "닉네임은 영문, 숫자, 한글만 사용할 수 있습니다.",
+  "status": 400
+}
+```
+
+**에러 응답 11:** `409 Conflict` — 이미 가입된 email일 때 (user@example.com 회원이 이미 있음)
+
+요청
+
+```json
+{
+  "email": "user@example.com",
+  "password": "password1234!",
+  "nickname": "gygim"
+}
+```
+
+응답
+
 ```json
 {
   "message": "이미 사용 중인 이메일입니다.",
@@ -88,25 +335,23 @@ method: POST
 }
 ```
 
-| 이름 | 데이터타입 | 필수 | 설명 |
-|---|---|---|---|
-| message | String | Y | 클라이언트 화면에 그대로 보여 줄 에러 메시지 |
-| status | Integer | Y | HTTP 상태 코드 |
+**에러 응답 12:** `409 Conflict` — 이미 사용 중인 nickname일 때 (gygim 회원이 이미 있음)
 
-| 상태 | 발생 조건 | message | 구분 |
-|---|---|---|---|
-| 400 | email이 null·빈 값·공백만 있음 | 이메일을 입력해 주세요. | 리뷰 반영 |
-| 400 | email이 이메일 형식이 아님 | 올바른 이메일 형식으로 입력해 주세요. | 리뷰 반영 |
-| 400 | email이 100자 초과 | 이메일은 100자 이하로 입력해 주세요. | 리뷰 반영 |
-| 400 | password가 null·빈 값·공백만 있음 | 비밀번호를 입력해 주세요. | 리뷰 반영 |
-| 400 | password에 공백 문자 포함 | 비밀번호에는 공백을 사용할 수 없습니다. | 리뷰 반영 |
-| 400 | password가 4자 미만 또는 20자 초과 | 비밀번호는 4자 이상 20자 이하로 입력해 주세요. | 리뷰 반영 |
-| 400 | password에 영문·숫자·특수문자 중 하나라도 없음 | 비밀번호는 영문, 숫자, 특수문자를 각각 1개 이상 포함해 주세요. | 리뷰 반영 |
-| 400 | nickname이 null·빈 값·공백만 있음 | 닉네임을 입력해 주세요. | 리뷰 반영 |
-| 400 | nickname이 4자 미만 또는 20자 초과 | 닉네임은 4자 이상 20자 이하로 입력해 주세요. | 리뷰 반영 |
-| 400 | nickname에 영문·숫자·한글 외 문자(특수문자·공백 등) 포함 | 닉네임은 영문, 숫자, 한글만 사용할 수 있습니다. | 리뷰 반영 |
-| 409 | 이미 가입된 email | 이미 사용 중인 이메일입니다. | 리뷰 반영 |
-| 409 | 이미 사용 중인 nickname | 이미 사용 중인 닉네임입니다. | 리뷰 반영 |
+요청
 
-- 구분: `리뷰 반영` = PR 리뷰에서 확정된 정책
-- 결정 필요: 여러 필드가 동시에 잘못되었을 때 첫 번째 오류 하나만 반환할지, 모두 반환할지 (추천: 위 표 순서대로 첫 번째 오류 하나만 반환)
+```json
+{
+  "email": "new@example.com",
+  "password": "password1234!",
+  "nickname": "gygim"
+}
+```
+
+응답
+
+```json
+{
+  "message": "이미 사용 중인 닉네임입니다.",
+  "status": 409
+}
+```
